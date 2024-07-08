@@ -7,18 +7,7 @@ BluetoothSerial SerialBT; // Instância para comunicação Bluetooth
 
 RA::RA() {}
 
-const int stepPin = 5;                               // Passo e direção para motor de movimento angular
-const int dirPin = 17;
-const int stepPinx = 16;
-const int dirPinx = 4;
-const int stepPiny = 2;
-const int dirPiny = 15;
-const int MS1 = 21;
-const int MS2 = 19;
-const int MS3 = 18;
-// Declaração de Entradas Analógicas
-const int foto1 = 34;                                   // Fotodetector de referência é conectado ao GPIO 34 (Analog ADC1_CH6)
-const int foto2 = 35;                                   // Fotodetector de saída é conectado ao GPIO 35 (Analog ADC1_CH7)
+
 //Fim das entradas analógicas
 //Variáveis para aquisição de dados
 int ValorFoto1 = 0;                                   //Variável para fotodetector de referência (foto1)
@@ -50,6 +39,9 @@ float r;                                                //Raio da circunferênci
 //Definição de variáveis para movimentação 2D
 float esp = 2;                                     // Espaçamento entre células em mm
 float x,y = 0;                                     // Posição em x e y em mm, sempre inicia-se em (0,0)
+float ww = 0;                                       // Posição W inicial, sempre inicia em 0, i.e., o mais abaixo possível
+float w_atual;
+float matrizW[nPossible][2];                        //armazenamento angulo, coordenada
 int celula;                                        // Célula que o reflectômetro deve se posicionar, receber valo de 0 a 120 do usuário
 //Fim da definição de variáveis para movimentação 2D
 
@@ -313,43 +305,59 @@ void RA::MoverUmPontoW()
 
 void RA::moverDistanciaW(float d)
 {
+	if (d>0)
+	{
+		ConfigParaCimaW();
+	}
+	
+	else
+	{
+		ConfigParabaixoW()
+	}
        //faz um loop para mover uma distancia d
-  for(int i=0; i< (int)(d/kW); i++)
-  {
-    passoW();
+	for(int i=0; i< (int)(d/kW); i++)
+ 	 {
+ 		   passoW();
   } 
+  w_atual += d;
 }
 
 
 int RA::ProcuraPontoW()
 {
   float maiorReflectancia;
-  int PontoWMaiorReflectancia; //qual ponto de 0 a n-1 do eixo W está a maior reflectancia
 
-  for(int i = 0; i<nPossible; i++ )
-  {
-    if(i==0)
-    {
-      maiorReflectancia = reflectancia();
-    }
-    else
-    {
-      if(reflectancia()>maiorReflectancia)
-      {
-        maiorReflectancia = reflectancia();
-        PontoWMaiorReflectancia = i;
-      }
+	moverDistanciaT(w_atual - angMinGraus); //vai para ponto mais abaixo de rotacao
+	
+	//começa a gravar cada angulo para cada ponto de w
+	
+	for(int i=0; i<nPossible; i++)
+	{
+		moverDistanciaW(i*(dL/nPossible)); //para no pinto i do eixo w
+		if(i == 0)
+		{
+			matrizW[i][0] = theta_atual;
+			matrizW[i][1] = w_atual;
+		}
+		
+		else
+		{
+			//aqui iremos percorrer dL/10 para cima procurando o ponto de maior reflectancia,
+			//assumir como o angulo de maior reflectancia o angulo da coordenada i
+			//depois, voltar para coordenada i no eixo W
+			
+			
+		}
+		
+	}
+	
 
-    }
 
-  }
-return PontoWMaiorReflectancia;
 }
 
 void RA::ConstroiArrayW()
 {
 
-float matrizCoordenadas[2][nPossible];
 
 //aqui eu vou supor que o usuário do reflectômetro posicionou o fotodetector do feixe refletido no ponto mais abaixo possível
 

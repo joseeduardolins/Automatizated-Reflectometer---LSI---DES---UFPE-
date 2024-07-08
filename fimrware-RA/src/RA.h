@@ -14,7 +14,7 @@ RA();
 
 #define nPossible 35000      //numero de posições possíveis para fotodetector
 #define nTheta 35000      //numero de posições possíveis para fotodetector
-#define dL 400       //amplitude máxima de movimento (mm)
+#define dL 360       //amplitude máxima de movimento (mm)
 #define dtheta 35   //amplitude máxima de rotação (graus)
 #define homePinW 2  //pino sensor de fim de curso eixo W 
 
@@ -46,6 +46,10 @@ RA();
 #define dirPinT   17         //define pino dir para drive THETA 
 #define enableT   25
 #define kT        0.000223     //Define valor constante mm/passo motor THETA
+
+#define MS1  21
+#define MS2  19
+#define MS3  18
 
 //float vecW[nPossible][2];  //vetor que armazena valores de distância W em função de ângulo theta
 
