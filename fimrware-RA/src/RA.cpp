@@ -1,6 +1,11 @@
 #include "RA.h"
 #include <Arduino.h>
 #include <BluetoothSerial.h>
+#include <SPIFFS.h>
+
+#include <Wire.h>
+#include <Adafruit_ADS1X15.h>
+
 
 
 BluetoothSerial SerialBT; // Instância para comunicação Bluetooth
@@ -52,17 +57,25 @@ float distance = 0.0;
 void RA::Begin() {
 
   Serial.begin(115200);
-  analogReadResolution(12);                             //Número de bits do ADC
-  adcAttachPin(34);                                     //Selecionando pino 34 para ADC
-  adcAttachPin(35);                                     //Selecionando pino 35 para ADC
-  analogSetPinAttenuation(34,ADC_0db);                  //Seleciona atenuação de 0db no pino 34
-  analogSetPinAttenuation(35,ADC_0db);                  //Seleciona atenuação de 0db no pino 35
 
 
   SerialBT.begin("ReflectometroAutomatizado"); // Nome do dispositivo Bluetooth
   pinMode(stepPinW, OUTPUT);
   pinMode(dirPinW, OUTPUT);
   pinMode(homePinW, INPUT);
+  
+    // Inicializa o ADS1115 no endereço padrão (0x48 para ADDR = GND)
+  if (!ads.begin()) {
+    Serial.println("Erro ao inicializar o ADS1115!");
+    while (1);
+  }
+  
+    if (!SPIFFS.begin(true)) {
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    return;
+    
+  
+  
 }
 
 void RA::processFunction(String functionName, String argument) {
@@ -252,11 +265,18 @@ void RA::IrHomeW()
 
 void RA::passoW()
 {
-  //dá um pulso no pino step
-  delayMicroseconds(delayPassoW);
-  digitalWrite(stepPinW, HIGH);
-  delayMicroseconds(delayPassoW);
-  digitalWrite(stepPinW, LOW);
+	if(w_atual>dL || w_atual<0)
+	{
+		return;
+	}
+	else
+	{
+		  //dá um pulso no pino step
+		  delayMicroseconds(delayPassoW);
+		digitalWrite(stepPinW, HIGH);
+		delayMicroseconds(delayPassoW);
+		digitalWrite(stepPinW, LOW);
+	}
 }
 
 void RA::mover1mmW()
@@ -326,6 +346,7 @@ void RA::moverDistanciaW(float d)
 int RA::ProcuraPontoW()
 {
   float maiorReflectancia;
+  float anguloMaiorReflectancia;
 
 	moverDistanciaT(w_atual - angMinGraus); //vai para ponto mais abaixo de rotacao
 	
@@ -342,9 +363,27 @@ int RA::ProcuraPontoW()
 		
 		else
 		{
-			//aqui iremos percorrer dL/10 para cima procurando o ponto de maior reflectancia,
+			maiorReflectancia = reflectancia();
+			//aqui iremos percorrer grauBusca graus para cima procurando o ponto de maior reflectancia,
+			for(int j = 0;j<passoGrauBusca; j++)
+			{
+				rotacionar(grauBusca/passoGrauBusca);  
+				if(reflectancia()>maiorReflectancia)
+				{
+					maiorReflectancia = reflectancia();
+					anguloMaiorReflectancia = theta_atual;
+				}
+			}
 			//assumir como o angulo de maior reflectancia o angulo da coordenada i
-			//depois, voltar para coordenada i no eixo W
+			matrizW[i][0] = anguloMaiorReflectancia;
+			matrizW[i][1] = w_atual;
+			SerialBT.print(matrizW[i][0]);
+			SerialBT.print(",");
+			SerialBT.println(matrizW[i][1]);
+			//parei
+			
+			//depois, rotacionar de volta para o ultimo ponto cadastrado
+			irParaAngulo(anguloMaiorReflectancia);
 			
 			
 		}
@@ -362,19 +401,41 @@ void RA::ConstroiArrayW()
 //aqui eu vou supor que o usuário do reflectômetro posicionou o fotodetector do feixe refletido no ponto mais abaixo possível
 
 //armazena matrix de coordenadas (angulo, w) na memoria flash 
+	for (int i = 0; i < nPossible; i++) {
+    	for (int j = 0; j < 2; j++) {
+    	  file.print(matrizW[i][j]);
+    	  if (j < 1) file.print(","); // Separate values with a comma
+   	 }
+    file.println(); // New line for each row
+  }
 
+  file.close();
+  Serial.println("Matrix written to file");
 /*lembrar de converter todas as variaveis do array vecW para float inves de int.**/
 }
 
 
 float RA::reflectancia()
 {
-    //obterReflec a partir de uma media de amostras de reflectancias
+	int16_t soma0 = 0;
+	int16_t soma1 = 0;
+	float media;
+	//obterReflec a partir de uma media de amostras de reflectancias
+	for(int i=0;i<mediaADC;i++)
+	{
+    		soma0+= ads.readADC_SingleEnded(0);
+    		soma1+= ads.readADC_SingleEnded(1);
+    		delay(10);
+    	}
+    	
+    	media = (float)soma0/soma1;
+    	return media;
 }
 
 void RA::irParaAngulo(float thetaAtual)
 {
     //funcao irparaangulo
+    rotacionar(theta_atual - thetaAtual);
 }
 
 

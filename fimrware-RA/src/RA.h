@@ -18,6 +18,10 @@ RA();
 #define dtheta 35   //amplitude máxima de rotação (graus)
 #define homePinW 2  //pino sensor de fim de curso eixo W 
 
+#define mediaADC 50
+#define grauBusca 3
+#define passoGrauBusca 50
+
 
 //eixo W
 #define delayPassoW 800 //delay para pulso no pino step do drive W
