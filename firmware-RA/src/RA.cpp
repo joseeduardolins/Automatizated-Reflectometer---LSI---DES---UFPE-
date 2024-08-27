@@ -104,6 +104,7 @@ void RA::Begin() {
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
     }
+  Serial.println("Fim Begin");
 }
 
 // Função para armazenar dados em SPIFFS
@@ -145,7 +146,6 @@ void RA::processFunction(String functionName, String argument1, String argument2
 
   // Execute a função com base no nome
 
-  /////////////////////////////////////////////PARA W//////////////////////////////////
   if (functionName == "IrHome") {
 
     if(argument1 == "W")
@@ -379,6 +379,28 @@ void RA::processFunction(String functionName, String argument1, String argument2
     SerialBT.print("ConstroiArray "); SerialBT.println("Executado");
   }
 
+  else if (functionName == "reflectancia") {
+    reflectancia();
+    SerialBT.print("reflectancia "); SerialBT.println("Executado");
+  }
+
+  else if (functionName == "varreduraAngular") {
+    varreduraAngular(argument1.toFloat(),argument2.toFloat(), argument3.toFloat());
+
+    SerialBT.print("varreduraAngular "); SerialBT.println("Executado");
+  }
+  else if (functionName == "percorrerSuperficie") {
+    percorrerSuperficie(argument1.toFloat(),argument2.toFloat(), argument3.toFloat());
+
+    SerialBT.print("percorrerSuperficie "); SerialBT.println("Executado");
+  }
+
+  else if (functionName == "imprimirValoresMedios") {
+    imprimirValoresMedios();
+
+    SerialBT.print("imprimirValoresMedios "); SerialBT.println("Executado");
+  }
+
    else {
     Serial.println("Funcao desconhecida");
     SerialBT.println("Funcao desconhecida ");
@@ -483,6 +505,15 @@ void RA::IrHome(int motor)
 
 void RA::passo(int motor)
 {
+
+      if ((w_atual < wMin_mm || w_atual > wMax_mm) ||
+        (theta_atual < angMinGraus || theta_atual > angMaxGraus) ||
+        (x < xMin_mm || x > xMax_mm) ||
+        (y < yMin_mm || y > yMax_mm)) {
+        
+        Serial.println("Valor fora dos limites! Movimento interrompido.");
+        return;  // Interrompe a execução da função
+    }
 
     if(motor == motorW)
   {
@@ -812,50 +843,146 @@ void RA::ConstroiArray(){
 
 }
 
+void RA::alinharMotorW(float theta) {
+    if (!SPIFFS.begin(true)) {
+        Serial.println("Falha ao montar o sistema de arquivos");
+        return;
+    }
 
+    File file = SPIFFS.open("/coordenadas.txt", FILE_READ);
+    if (!file) {
+        Serial.println("Falha ao abrir o arquivo para leitura");
+        return;
+    }
 
-float RA::reflectancia()
-{
-/*  
-	int16_t soma0 = 0;
-	int16_t soma1 = 0;
-	float media;
-	//obterReflec a partir de uma media de amostras de reflectancias
-	for(int i=0;i<mediaADC;i++)
-	{
-    		soma0+= ads.readADC_SingleEnded(0);
-    		soma1+= ads.readADC_SingleEnded(1);
-    		delay(10);
-    	}
-    	
-    	media = (float)soma0/soma1;
-    	return media;
-      */
-     return 0.0;
+    float storedTheta, storedW;
+    float closestTheta = 0;
+    float closestW = 0;
+    float minDifference = 360.0;  // Inicializa com um valor grande (360 graus é o máximo de diferença possível)
+    bool coordenadaEncontrada = false;
+
+    while (file.available()) {
+        String line = file.readStringUntil('\n');  // Lê uma linha do arquivo
+        int commaIndex = line.indexOf(',');  // Encontra a posição da vírgula
+        storedTheta = line.substring(0, commaIndex).toFloat();  // Extrai e converte o theta
+        storedW = line.substring(commaIndex + 1).toFloat();  // Extrai e converte o W
+
+        float difference = abs(storedTheta - theta);  // Calcula a diferença absoluta entre o theta armazenado e o theta recebido
+
+        if (difference < minDifference) {
+            closestTheta = storedTheta;
+            closestW = storedW;
+            minDifference = difference;
+            coordenadaEncontrada = true;
+        }
+    }
+
+    file.close();
+
+    if (coordenadaEncontrada) {
+        moverDistancia(closestW - w_atual, motorW);  // Move o motor para o W correspondente ao theta mais próximo
+        w_atual = closestW;  // Atualiza a posição atual de W
+        Serial.print("Coordenada W ajustada para o theta mais próximo: ");
+        Serial.println(closestTheta);
+    } else {
+        Serial.println("Nenhuma coordenada W encontrada para o theta fornecido.");
+    }
 }
+
+
+float RA::reflectancia() {
+    int32_t soma0 = 0;
+    int32_t soma1 = 0;
+
+    for (int i = 0; i < mediaADC; i++) {
+        //soma0 += ads.readADC_SingleEnded(0);            //sinal foto entrada
+        //soma1 += ads.readADC_SingleEnded(1);            //sinal foto saida
+        delay(10);
+    }
+
+    if (soma1 == 0) {
+        Serial.println("Erro: Divisão por zero na função reflectancia.");
+        return 0.0;  // Retorna um valor neutro ou qualquer outro que faça sentido no seu contexto
+    }
+
+    return static_cast<float>(soma0) / soma1;
+}
+
+
+void RA::imprimirValoresMedios() {
+    int32_t soma0 = 0;
+    int32_t soma1 = 0;
+
+    for (int i = 0; i < mediaADC; i++) {
+        // soma0 += ads.readADC_SingleEnded(0);  // sinal foto entrada
+        // soma1 += ads.readADC_SingleEnded(1);  // sinal foto saída
+        delay(10);
+    }
+
+    // Proteção contra divisão por zero
+    float reflectancia = (soma1 != 0) ? static_cast<float>(soma0) / soma1 : 0.0;
+
+    // Calcula médias
+    float mediaEntrada = static_cast<float>(soma0) / mediaADC;
+    float mediaSaida = static_cast<float>(soma1) / mediaADC;
+
+    // Imprime valores
+    SerialBT.print("Valor de Entrada (média): ");
+    SerialBT.println(mediaEntrada);
+    SerialBT.print("Valor de Saída (média): ");
+    SerialBT.println(mediaSaida);
+    SerialBT.print("Reflectância: ");
+    SerialBT.println(reflectancia);
+}
+
+
+
 
 void RA::irParaAngulo(float thetaAtual)
 {
     //funcao irparaangulo
     rotacionar(theta_atual - thetaAtual);
+    //alinha o motor W com o laser refletido após a rotação  
+    alinharMotorW(thetaAtual); 
 }
 
 
+void RA::varreduraAngular(float anguloMin, float anguloMax, float resolucaoAngular) {
+    // Vai para o ângulo mínimo
+    irParaAngulo(anguloMin);
 
-void RA::adquirir()                                         //Adquire um ponto de reflectância a partir de média de N pontos. 
-{
-  /*
-  for (int i=0; i<N; i++)
-  {
-  ValorFoto1 = analogRead(foto1);                       //Lê valor do fotodetector de REFERÊNCIA
-  ValorFoto2 = analogRead(foto2);                       //Lê valor do fotodetector de SAÍDA                                     //Verifica se está ocorrendo conversão no pino 34, esse comando retorna verdadeiro ou falso
-  reflect[i] = ValorFoto2/ValorFoto1;
-  soma = soma+ reflect[i];
-  }
-  R = soma/N;
-  delayMicroseconds(500);
-  */
+    // Realiza a varredura de ângulo mínimo até ângulo máximo
+    for (float anguloAtual = anguloMin; anguloAtual <= anguloMax; anguloAtual += resolucaoAngular) {
+        // Rotaciona para o ângulo atual
+        irParaAngulo(anguloAtual);
+
+        // Obtém a reflectância no ângulo atual
+        float valorReflectancia = reflectancia();
+
+        // Imprime o par ângulo, reflectância via Serial Bluetooth
+        SerialBT.print(anguloAtual);
+        SerialBT.print(", ");
+        SerialBT.println(valorReflectancia);
+    }
 }
+
+void RA::percorrerSuperficie(float max, float min, float res) {
+
+    const int totalCelulas = 121;
+
+    for (int celula = 0; celula < totalCelulas; celula++) {
+        ir_para(celula); // Chama a função para ir para a célula atual
+
+        // Printa a célula atual
+        SerialBT.print(celula);
+        SerialBT.println(":");
+        // printa a varredura angular na célula atual
+        varreduraAngular(max, min, res);
+
+    }
+}
+
+
 
 
 void RA::rotacionar (float theta)

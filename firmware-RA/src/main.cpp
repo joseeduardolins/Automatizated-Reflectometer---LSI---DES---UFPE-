@@ -11,9 +11,6 @@ RAlib.Begin();
 
 
 
-
-void processFunction(String functionName, String argument);
-
 void loop() {
 RAlib.EsperaMensagem();
 delay(10);

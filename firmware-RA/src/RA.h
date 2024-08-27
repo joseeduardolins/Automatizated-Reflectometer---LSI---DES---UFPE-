@@ -10,11 +10,18 @@ public:
 RA();
 
 #define angMinGraus 35          //angulo minimo que o reflectometro suporta
-#define angMaxGraus 70          //angulo maximo que o reflectometro suporta 
+#define angMaxGraus 55          //angulo maximo que o reflectometro suporta 
 
-#define nPossible 35000      //numero de posições possíveis para fotodetector
-#define nTheta 35000      //numero de posições possíveis para fotodetector
-#define dL 360       //amplitude máxima de movimento (mm)
+#define xMax_mm 30
+#define xMin_mm -30
+#define yMax_mm 30
+#define yMin_mm -30
+#define wMax_mm 3500
+#define wMin_mm 0
+
+#define nPossible 3500      //numero de posições possíveis para fotodetector
+#define nTheta 3500      //numero de posições possíveis para rotacao
+#define dL 3500       //amplitude máxima de movimento (mm)
 #define dtheta 35   //amplitude máxima de rotação (graus)
 #define homePinW 2  //pino sensor de fim de curso eixo W 
 
@@ -83,13 +90,18 @@ void avisaMovimentoInsuficiente(float movimento, int motor);
 void ConfigParabaixo(int motor); //função que configura motor de passo fazer fotodetector descer
 void MoverUmPontoW();    //função que faz fotodetector mover um ponto, de acordo com a direção dada, número de pontos e amplitude de movimento
 void ConstroiArray();   //percorre todos os n pontos para encontrar o valor de W que obteve maior valor de intensidade do fotodetector para um determinado valor de theta e armazena na flash
+void alinharMotorW(float theta);
 
 //aquisição
-void adquirir();
-void rotacionar (float theta);
-void ir_para(int celula);
-void irParaAngulo(float thetaAtual);
-float reflectancia();
+void rotacionar (float theta);               //rotaciona um angulo theta
+void ir_para(int celula);                    //vai para uma celula especifica
+void irParaAngulo(float thetaAtual);        //vai para um angulo especifico 
+float reflectancia();                      //calcula reflectancia dividindo valor da saida vs entrada
+void imprimirValoresMedios();              //printa valores da entrada, saida e reflectancia 
+
+
+void varreduraAngular(float anguloMin, float anguloMax, float resolucaoAngular);
+void percorrerSuperficie(float, float, float);
 
 //armazenamento de dados 
 void storeInSPIFFS(const char* path, float angulo, float w);
