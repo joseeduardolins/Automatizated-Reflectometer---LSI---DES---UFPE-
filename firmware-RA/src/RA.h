@@ -12,12 +12,12 @@ RA();
 #define angMinGraus 35          //angulo minimo que o reflectometro suporta
 #define angMaxGraus 55          //angulo maximo que o reflectometro suporta 
 
-#define xMax_mm 30
-#define xMin_mm -30
-#define yMax_mm 30
-#define yMin_mm -30
-#define wMax_mm 3500
-#define wMin_mm 0
+#define xMax_mm 5000
+#define xMin_mm -5000
+#define yMax_mm 5000
+#define yMin_mm -5000
+#define wMax_mm 5000
+#define wMin_mm -5000
 
 #define nPossible 3500      //numero de posições possíveis para fotodetector
 #define nTheta 3500      //numero de posições possíveis para rotacao
@@ -32,31 +32,31 @@ RA();
 
 //eixo W
 #define delayPassoW 800 //delay para pulso no pino step do drive W
-#define stepPinW  12      //define pino de step para drive W
-#define dirPinW   13         //define pino dir para drive W 
-#define enableW   33
-#define kW        0.00446       //Define valor constante mm/passo motor W
+#define stepPinW  3      //define pino de step para drive W
+#define dirPinW   1         //define pino dir para drive W 
+#define enableW   32
+#define kW        0.146       //Define valor constante mm/passo motor W
 
 //Eixo X
 #define delayPassoX 800 //delay para pulso no pino step do drive X
 #define stepPinX  16      //define pino de step para drive X
 #define dirPinX   14         //define pino dir para drive X
 #define enableX   26
-#define kX        0.00525       //Define valor constante mm/passo motor X
+#define kX        0.146       //Define valor constante mm/passo motor X
 
 //Eixo Y
 #define delayPassoY 800 //delay para pulso no pino step do drive y
 #define stepPinY  2      //define pino de step para drive Y
 #define dirPinY   15         //define pino dir para drive Y 
 #define enableY   27
-#define kY        0.00446       //Define valor constante mm/passo motor Y
+#define kY        0.146       //Define valor constante mm/passo motor Y
 
 //Eixo Theta
 #define delayPassoT 1000 //delay para pulso no pino step do drive THETA
 #define stepPinT  5      //define pino de step para drive THETA
 #define dirPinT   17         //define pino dir para drive THETA 
 #define enableT   25
-#define kT        0.000223     //Define valor constante mm/passo motor THETA
+#define kT        0.146     //Define valor constante mm/passo motor THETA
 
 #define MS1  21
 #define MS2  19
@@ -81,6 +81,7 @@ void EsperaMensagem();
 // eixo W
 void IrHome(int motor);       //função que faz fotodetector ir para origem do eixo W
 void passo(int motor);        //dá apenas 1 passo no motor de passo 
+void npassos(int motor, int n);
 void mover1mm(int motor); 
 void mover10mm(int motor);     //move distancia especifica, considerando direçao configurada
 void mover100mm(int motor);

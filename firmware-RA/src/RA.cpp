@@ -88,10 +88,10 @@ void RA::Begin() {
   pinMode(dirPinY, OUTPUT);
   pinMode(enableY, OUTPUT);
   
-  digitalWrite(enableW, HIGH);
-  digitalWrite(enableT, HIGH);
-  digitalWrite(enableX, HIGH);
-  digitalWrite(enableY, HIGH);
+  digitalWrite(enableW, LOW);
+  digitalWrite(enableT, LOW);
+  digitalWrite(enableX, LOW);
+  digitalWrite(enableY, LOW);
   
 /*
     // Inicializa o ADS1115 no endereço padrão (0x48 para ADDR = GND)
@@ -135,12 +135,13 @@ void RA::readFromSPIFFS(const char* path) {
 
 
 void RA::processFunction(String functionName, String argument1, String argument2, String argument3) {
+
   Serial.print("Funcao recebida: ");
   Serial.print(functionName);
   Serial.print(", Argumento1: ");
-  Serial.println(argument1);
+  Serial.print(argument1);
   Serial.print(", Argumento2: ");
-  Serial.println(argument2);
+  Serial.print(argument2);
   Serial.print(", Argumento3: ");
   Serial.println(argument3);
 
@@ -201,6 +202,33 @@ void RA::processFunction(String functionName, String argument1, String argument2
     SerialBT.print("passo : ");SerialBT.print(argument1); SerialBT.println(" Executado");
   } 
   
+
+    else if (functionName == "npassos") {
+         if(argument1 == "W")
+    {
+     npassos(motorW, argument2.toInt());
+    }
+
+    else if (argument1 == "T")
+    {
+      npassos(motorT, argument2.toInt());
+    }
+    else if (argument1 == "X")
+    {
+      npassos(motorX, argument2.toInt());
+    }
+    else if (argument1 == "Y")
+    {
+      npassos(motorY, argument2.toInt());
+    }
+
+    else
+    {
+      SerialBT.print("Argumento inválido");
+    }
+    SerialBT.print("npassos : ");SerialBT.print(argument1); SerialBT.println(" Executado");
+  } 
+
   else if (functionName == "mover1mm") {
          if(argument1 == "W")
     {
@@ -409,53 +437,46 @@ void RA::processFunction(String functionName, String argument1, String argument2
 
 void RA::EsperaMensagem() {
   if (SerialBT.available()) {
-    String incomingData = SerialBT.readStringUntil('\n'); // Leia a string até encontrar uma quebra de linha
-    
-    // Encontre a posição do primeiro caractere de espaço
+    String incomingData = SerialBT.readStringUntil('\n');
+    incomingData.trim(); // remove espaços e quebras de linha extras no começo/fim
+
     int firstSpacePos = incomingData.indexOf(' ');
-
-    // Verifique se há espaço na string
-    if (firstSpacePos != -1) {
-      // Separe o nome da função
-      String functionName = incomingData.substring( firstSpacePos);
-
-      // Encontre a posição do segundo caractere de espaço
-      int secondSpacePos = incomingData.indexOf(' ', firstSpacePos + 1);
-
-      // Verifique se há um segundo espaço na string
-      if (secondSpacePos != -1) {
-        // Separe o primeiro argumento
-        String argument1 = incomingData.substring(firstSpacePos + 1, secondSpacePos);
-
-        // Encontre a posição do terceiro caractere de espaço
-        int thirdSpacePos = incomingData.indexOf(' ', secondSpacePos + 1);
-
-        // Verifique se há um terceiro espaço na string
-        if (thirdSpacePos != -1) {
-          // Separe o segundo e terceiro argumento
-          String argument2 = incomingData.substring(secondSpacePos + 1, thirdSpacePos);
-          String argument3 = incomingData.substring(thirdSpacePos + 1);
-
-          // Execute a função com base no nome e nos argumentos
-          processFunction(functionName, argument1, argument2, argument3);
-        } else {
-          Serial.println("Formato inválido. Use 'funcao argumento1 argumento2 argumento3'");
-        }
-      } else {
-        Serial.println("Formato inválido. Use 'funcao argumento1 argumento2 argumento3'");
-      }
-    } else {
+    if (firstSpacePos == -1) {
       Serial.println("Formato inválido. Use 'funcao argumento1 argumento2 argumento3'");
+      return;
     }
+
+    String functionName = incomingData.substring(0, firstSpacePos);
+
+    int secondSpacePos = incomingData.indexOf(' ', firstSpacePos + 1);
+    if (secondSpacePos == -1) {
+      Serial.println("Formato inválido. Use 'funcao argumento1 argumento2 argumento3'");
+      return;
+    }
+
+    String argument1 = incomingData.substring(firstSpacePos + 1, secondSpacePos);
+
+    int thirdSpacePos = incomingData.indexOf(' ', secondSpacePos + 1);
+    if (thirdSpacePos == -1) {
+      Serial.println("Formato inválido. Use 'funcao argumento1 argumento2 argumento3'");
+      return;
+    }
+
+    String argument2 = incomingData.substring(secondSpacePos + 1, thirdSpacePos);
+    String argument3 = incomingData.substring(thirdSpacePos + 1);
+
+    // Chama a função
+    processFunction(functionName, argument1, argument2, argument3);
   }
 }
+
 
 
 void RA::ConfigParaCima(int motor)
 {
   if(motor == motorW)
   {
-      digitalWrite(dirPinX, HIGH);
+      digitalWrite(dirPinW, HIGH);
   }
 
  else if(motor == motorT)
@@ -479,7 +500,7 @@ void RA::ConfigParabaixo(int motor)
 {
     if(motor == motorW)
   {
-      digitalWrite(dirPinX, LOW);
+      digitalWrite(dirPinW, LOW);
   }
 
  else if(motor == motorT)
@@ -506,18 +527,18 @@ void RA::IrHome(int motor)
 void RA::passo(int motor)
 {
 
-      if ((w_atual < wMin_mm || w_atual > wMax_mm) ||
+     /* if ((w_atual < wMin_mm || w_atual > wMax_mm) ||
         (theta_atual < angMinGraus || theta_atual > angMaxGraus) ||
         (x < xMin_mm || x > xMax_mm) ||
         (y < yMin_mm || y > yMax_mm)) {
         
         Serial.println("Valor fora dos limites! Movimento interrompido.");
         return;  // Interrompe a execução da função
-    }
+    }*/
 
     if(motor == motorW)
   {
-      digitalWrite(enableW, LOW);
+     // digitalWrite(enableW, LOW);
 
       //dá um pulso no pino step
 		  delayMicroseconds(delayPassoW);
@@ -525,12 +546,12 @@ void RA::passo(int motor)
 		  delayMicroseconds(delayPassoW);
 		  digitalWrite(stepPinW, LOW);
 
-      digitalWrite(enableW, HIGH);
+     // digitalWrite(enableW, HIGH);
   }
 
  else if(motor == motorT)
   {
-      digitalWrite(enableT, LOW);
+      //digitalWrite(enableT, LOW);
       
       //dá um pulso no pino step
 		  delayMicroseconds(delayPassoT);
@@ -538,11 +559,11 @@ void RA::passo(int motor)
 		  delayMicroseconds(delayPassoT);
 		  digitalWrite(stepPinT, LOW);
 
-      digitalWrite(enableT, HIGH);
+      //digitalWrite(enableT, HIGH);
   }
 else if(motor == motorX)
   {
-      digitalWrite(enableX, LOW);
+      //digitalWrite(enableX, LOW);
       
       //dá um pulso no pino step
 		  delayMicroseconds(delayPassoX);
@@ -550,11 +571,11 @@ else if(motor == motorX)
 		  delayMicroseconds(delayPassoX);
 		  digitalWrite(stepPinX, LOW);
 
-      digitalWrite(enableX, HIGH);
+      //digitalWrite(enableX, HIGH);
   }
 else if(motor == motorY)
   {
-      digitalWrite(enableY, LOW);
+      //digitalWrite(enableY, LOW);
       
       //dá um pulso no pino step
 		  delayMicroseconds(delayPassoY);
@@ -562,13 +583,51 @@ else if(motor == motorY)
 		  delayMicroseconds(delayPassoY);
 		  digitalWrite(stepPinY, LOW);
 
-      digitalWrite(enableY, HIGH);
+      //digitalWrite(enableY, HIGH);
   }
   else{}
 	
 
 	
 }
+
+void RA::npassos(int motor, int n)
+{
+  //faz um loop para mover 1mm
+
+      if(motor == motorW)
+  {
+    for(int i=0; i< n; i++)
+     {
+        passo(motor);
+      }
+  }
+
+ else if(motor == motorT)
+  {
+    for(int i=0; i< n; i++)
+     {
+        passo(motor);
+      }
+  }
+else if(motor == motorX)
+  {
+    for(int i=0; i< n; i++)
+     {
+        passo(motor);
+      }
+  }
+else if(motor == motorY)
+  {
+    for(int i=0; i< n; i++)
+     {
+        passo(motor);
+      }
+  }
+  else{}
+
+}
+
 
 void RA::mover1mm(int motor)
 {
@@ -578,6 +637,7 @@ void RA::mover1mm(int motor)
   {
     for(int i=0; i< (int)(1/kW); i++)
      {
+
         passo(motor);
       }
   }
@@ -727,7 +787,7 @@ void RA::moverDistancia(float d, int motor)
 {
           if(motor == motorW)
   {
-      if (d>0)
+      if (d>0.0)
 	{
 		ConfigParaCima(motor);
 	}
@@ -737,7 +797,7 @@ void RA::moverDistancia(float d, int motor)
 		ConfigParabaixo(motor);
 	}
        //faz um loop para mover uma distancia d
-	for(int i=0; i< (int)(d/kW); i++)
+	for(int i=0; i< (int)(abs(d)/kW); i++)
  	 {
  		   passo(motor);
   } 
@@ -746,7 +806,7 @@ void RA::moverDistancia(float d, int motor)
 
  else if(motor == motorT)
   {
-        if (d>0)
+        if (d>0.0)
 	{
 		ConfigParaCima(motor);
 	}
@@ -756,7 +816,7 @@ void RA::moverDistancia(float d, int motor)
 		ConfigParabaixo(motor);
 	}
        //faz um loop para mover uma distancia d
-	for(int i=0; i< (int)(d/kT); i++)
+	for(int i=0; i< (int)(abs(d)/kT); i++)
  	 {
  		   passo(motor);
   } 
@@ -764,7 +824,7 @@ void RA::moverDistancia(float d, int motor)
   }
 else if(motor == motorX)
   {
-        if (d>0)
+        if (d>0.0)
 	{
 		ConfigParaCima(motor);
 	}
@@ -774,7 +834,7 @@ else if(motor == motorX)
 		ConfigParabaixo(motor);
 	}
        //faz um loop para mover uma distancia d
-	for(int i=0; i< (int)(d/kX); i++)
+	for(int i=0; i< (int)(abs(d)/kX); i++)
  	 {
  		   passo(motor);
   } 
@@ -783,7 +843,7 @@ else if(motor == motorX)
   }
 else if(motor == motorY)
   {
-          if (d>0)
+          if (d>0.0)
 	{
 		ConfigParaCima(motor);
 	}
@@ -793,7 +853,7 @@ else if(motor == motorY)
 		ConfigParabaixo(motor);
 	}
        //faz um loop para mover uma distancia d
-	for(int i=0; i< (int)(d/kY); i++)
+	for(int i=0; i< (int)(abs(d)/kY); i++)
  	 {
  		   passo(motor);
   } 
@@ -1043,7 +1103,7 @@ void RA::rotacionar (float theta)
   else{
     digitalWrite(dirPinX, LOW);                        //Translada para região positiva (Direita)
   }
-  for (int i=0; i < (int)(d/0.011); i++)               //Dá o número de passos relacionado a distância a ser transladada em mm
+  for (int i=0; i < (int)(abs(d)/0.011); i++)               //Dá o número de passos relacionado a distância a ser transladada em mm
   {
     digitalWrite(stepPinX, HIGH);
     delayMicroseconds(500);
